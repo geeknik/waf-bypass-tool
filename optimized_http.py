@@ -446,8 +446,6 @@ _http_clients = {}
 
 def get_optimized_http_client(config: NetworkConfig) -> OptimizedHTTPClient:
     """Get or create optimized HTTP client singleton"""
-    global _http_clients
-
     with _http_client_lock:
         config_hash = hash((config.max_connections, config.connection_pool_size,
                           config.default_timeout, config.keep_alive))
