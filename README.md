@@ -49,7 +49,7 @@ A robust, machine learning-powered tool for detecting and bypassing Web Applicat
 ### Install from Source
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/waf-bypass-tool.git
+git clone https://github.com/geeknik/waf-bypass-tool.git
 cd waf-bypass-tool
 
 # Create virtual environment (recommended)
@@ -356,7 +356,7 @@ pytest tests/integration/
 ### Development Setup
 ```bash
 # Fork and clone the repository
-git clone https://github.com/yourusername/waf-bypass-tool.git
+git clone https://github.com/geeknik/waf-bypass-tool.git
 cd waf-bypass-tool
 
 # Create feature branch
@@ -420,8 +420,8 @@ This tool is intended for educational and research purposes only. Users are resp
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/waf-bypass-tool/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/waf-bypass-tool/discussions)
+- **Issues**: [GitHub Issues](https://github.com/geeknik/waf-bypass-tool/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/geeknik/waf-bypass-tool/discussions)
 - **Documentation**: [Read the Docs](https://waf-bypass-tool.readthedocs.io/)
 
 ---
