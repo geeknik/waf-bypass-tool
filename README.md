@@ -43,7 +43,7 @@ A robust, machine learning-powered tool for detecting and bypassing Web Applicat
 ## 🛠️ Installation
 
 ### Prerequisites
-- Python 3.8 or higher
+- Python 3.10 or higher
 - pip package manager
 
 ### Install from Source
@@ -58,18 +58,6 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
-
-# Optional: Install for development
-pip install -r requirements-dev.txt
-```
-
-### Docker Installation
-```bash
-# Build the container
-docker build -t waf-bypass .
-
-# Run the container
-docker run -it waf-bypass --help
 ```
 
 ## 🚀 Quick Start
@@ -422,7 +410,6 @@ This tool is intended for educational and research purposes only. Users are resp
 
 - **Issues**: [GitHub Issues](https://github.com/geeknik/waf-bypass-tool/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/geeknik/waf-bypass-tool/discussions)
-- **Documentation**: [Read the Docs](https://waf-bypass-tool.readthedocs.io/)
 
 ---
 
