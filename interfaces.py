@@ -63,6 +63,11 @@ class IWAFDetector(ABC):
         """Detect if WAF is present on a URL"""
         pass
 
+    @abstractmethod
+    def detect_waf_detailed(self, url: str) -> dict:
+        """Detect WAF with detailed information including type and confidence"""
+        pass
+
 
 class IWAFBypassService(ABC):
     """Interface for the main WAF bypass service"""

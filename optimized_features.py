@@ -210,6 +210,9 @@ class OptimizedFeatureExtractor:
             feature_names = sorted(all_features.keys())
             feature_vector = np.array([all_features[name] for name in feature_names], dtype=np.float32)
 
+            # Debug: Log feature dimensions
+            logger.debug(f"Feature extraction: {len(feature_names)} features, vector shape: {feature_vector.shape}")
+
             # Handle NaN and infinite values
             feature_vector = np.nan_to_num(feature_vector, nan=0.0, posinf=1000.0, neginf=-1000.0)
 
@@ -227,8 +230,8 @@ class OptimizedFeatureExtractor:
 
         except Exception as e:
             logger.warning(f"Feature extraction failed: {e}")
-            # Return zero vector on error
-            return np.zeros(30, dtype=np.float32)
+            # Return zero vector on error - use same dimension as successful extractions
+            return np.zeros(34, dtype=np.float32)
 
     def extract_features_batch(self, payloads: List[str]) -> np.ndarray:
         """

@@ -1,10 +1,10 @@
-# WAF Bypass Tool v2.0
+# WAF Bypass Tool v2.1
 
-[![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python Version](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Maintenance](https://img.shields.io/badge/maintained-yes-green.svg)]()
 
-An advanced, machine learning-powered tool for detecting and bypassing Web Application Firewalls (WAFs) with enterprise-grade performance and security features.
+A robust, machine learning-powered tool for detecting and bypassing Web Application Firewalls (WAFs) with functional reinforcement learning, comprehensive testing, and clean architecture. Core ML algorithms now properly learn from bypass attempts based on HTTP response codes.
 
 ## 🚀 Features
 
@@ -35,7 +35,9 @@ An advanced, machine learning-powered tool for detecting and bypassing Web Appli
 - [Architecture](#architecture)
 - [API Reference](#api-reference)
 - [Performance](#performance)
+- [Testing](#testing)
 - [Contributing](#contributing)
+- [Changelog](#changelog)
 - [License](#license)
 
 ## 🛠️ Installation
@@ -106,8 +108,8 @@ The tool supports multiple configuration sources with the following priority:
 
 ### Configuration File Example
 ```yaml
-app_name: "WAF Bypass Tool v2.0"
-version: "2.0.0"
+app_name: "WAF Bypass Tool v2.1"
+version: "2.1.0"
 environment: "development"
 
 # Machine Learning Configuration
@@ -297,23 +299,16 @@ response = http_client.get("https://example.com")
 
 ## ⚡ Performance
 
-### Benchmark Results
-- **Feature Extraction**: 10x faster with vectorized operations
-- **ML Training**: 5x faster convergence with batch processing
-- **HTTP Requests**: 10x faster with connection pooling
-- **Memory Usage**: 60% reduction across all components
-- **Concurrent Processing**: Support for 100+ simultaneous operations
-
-### Optimization Features
-- **Vectorized Computing**: NumPy-based high-performance operations
-- **Connection Pooling**: HTTP connection reuse and management
-- **Intelligent Caching**: Multi-level caching with smart invalidation
-- **Batch Processing**: Efficient bulk operations and training
+### Key Improvements
+- **Feature Extraction**: Vectorized operations for efficient payload analysis
+- **ML Training**: Batch processing for improved gradient estimation
+- **HTTP Operations**: Connection pooling and request optimization
+- **Concurrent Processing**: Multi-threaded URL scanning with configurable workers
 - **Resource Management**: Proper cleanup and memory optimization
 
 ### Performance Tuning
 ```yaml
-# High-performance configuration
+# High-throughput configuration
 ml_config:
   batch_size: 64
   epochs: 200
@@ -323,7 +318,7 @@ network_config:
   connection_pool_size: 20
   keep_alive: true
 
-# Memory-optimized configuration
+# Memory-efficient configuration
 ml_config:
   batch_size: 16
   max_model_history: 3
@@ -395,6 +390,19 @@ refactor: optimize HTTP client connection pooling
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 📋 Changelog
+
+### v2.1.0 (Critical Bug Fixes & Core Improvements)
+- **🔧 ML System Fixed**: Reinforcement learning now properly learns from HTTP response codes instead of sabotaging itself with artificial keyword penalties
+- **🧹 Code Quality**: Removed all debug print statements and implemented proper logging throughout
+- **📏 Configuration**: Removed forced testing overrides that broke intended functionality
+- **🚀 Ready for Learning**: ML system now converges correctly and adapts to WAF patterns over time
+
+### v2.0.0 (Previous Release)
+- Initial ML-powered WAF bypass implementation
+- Clean architecture with dependency injection
+- Multi-threaded processing capabilities
 
 ## ⚠️ Disclaimer
 

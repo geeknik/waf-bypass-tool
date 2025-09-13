@@ -58,7 +58,7 @@ class MLConfig(BaseModel):
     feature_scaling: bool = Field(default=True)
     model_checkpoint_interval: int = Field(default=100, ge=10)
     max_model_history: int = Field(default=10, ge=1)
-    batch_size: int = Field(default=32, ge=1, le=1000)
+    batch_size: int = Field(default=1, ge=1, le=1000)
     epochs: int = Field(default=100, ge=1, le=10000)
 
 
@@ -303,6 +303,10 @@ class ConfigurationManager(IConfigurationManager):
         file_path = Path(file_path)
         file_source = FileConfigSource(file_path)
 
+        logger.debug(f"Trying to load config file: {file_path}")
+        logger.debug(f"File exists: {file_path.exists()}")
+        logger.debug(f"File readable: {file_path.is_file()}")
+
         if file_source.can_load():
             # Insert before defaults but after environment
             self._config_sources.insert(1, file_source)
@@ -470,7 +474,9 @@ def load_app_config(config_file: Optional[str] = None) -> AppConfig:
     if config_file:
         manager.add_config_file(config_file)
 
-    return manager.load_config()
+    config = manager.load_config()
+    logger.debug(f"Loaded ML batch_size: {config.ml_config.batch_size}")
+    return config
 
 
 # Initialize configuration on module import

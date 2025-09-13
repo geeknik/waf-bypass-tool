@@ -176,11 +176,49 @@ class InputValidatorService(IInputValidator):
 
 
 class WAFDetectorService(IWAFDetector):
-    """Service for WAF detection"""
+    """Service for WAF detection with detailed identification"""
 
     def __init__(self, http_client: IHTTPClient, input_validator: IInputValidator):
         self.http_client = http_client
         self.input_validator = input_validator
+
+        # WAF signatures and detection patterns
+        self.waf_signatures = {
+            'Cloudflare': {
+                'headers': ['CF-RAY', 'CF-Cache-Status', 'CF-Request-ID'],
+                'response_patterns': ['DDoS protection by Cloudflare', 'Checking your browser', 'cf-browser-verification'],
+                'server_patterns': ['cloudflare', 'Cloudflare'],
+                'confidence': 0.9
+            },
+            'Akamai': {
+                'headers': ['X-Akamai-Transformed', 'X-Akamai-Edgescape', 'Akamai-Origin-Hop'],
+                'response_patterns': ['AkamaiGHost', 'Akamai Bot Manager'],
+                'server_patterns': ['AkamaiGHost', 'Akamai'],
+                'confidence': 0.85
+            },
+            'Imperva': {
+                'headers': ['X-Iinfo', 'X-Iinfo2', 'X-Incap-Sess'],
+                'response_patterns': ['Incapsula', 'Blocked by Imperva'],
+                'server_patterns': ['Incapsula', 'Imperva'],
+                'confidence': 0.8
+            },
+            'ModSecurity': {
+                'response_patterns': ['Mod_Security', 'mod_security', 'OWASP ModSecurity'],
+                'server_patterns': ['mod_security', 'ModSecurity'],
+                'confidence': 0.7
+            },
+            'F5 BIG-IP': {
+                'headers': ['X-WA-Info', 'X-WA-Application', 'X-Cnection'],
+                'response_patterns': ['The requested URL was rejected', 'Request Rejected'],
+                'server_patterns': ['BigIP', 'BIG-IP'],
+                'confidence': 0.75
+            },
+            'AWS WAF': {
+                'headers': ['x-amzn-RequestId', 'X-Amz-Cf-Id'],
+                'response_patterns': ['AWS', 'Forbidden'],
+                'confidence': 0.6
+            }
+        }
 
     def detect_waf(self, url: str) -> bool:
         """Detect WAF presence with comprehensive testing"""
@@ -191,55 +229,160 @@ class WAFDetectorService(IWAFDetector):
                 raise ValueError(result)
 
             validated_url = result
+            detection_details = self._analyze_waf_signatures(validated_url)
 
-            # Test paths that commonly trigger WAF
-            waf_test_paths = [
-                "/.git/config",
-                "/.env",
-                "/wp-config.php",
-                "/admin",
-                "/phpinfo.php",
-                "/etc/passwd",
-                "/var/www/html",
-                "/index.php?page=../../../../etc/passwd",
-                "/index.php?page=../../../../.env",
-                "/index.php?page=../../../../wp-config.php",
-            ]
+            # If we found specific WAF signatures, return True
+            if detection_details['detected_waf'] != 'Unknown':
+                return True
 
-            # Test payloads
-            waf_test_payloads = [
-                "<script>alert(1)</script>",
-                "' OR 1=1 --",
-                "UNION SELECT null,null,null",
-                "../../../../../../etc/passwd",
-                "../../../../../../.env",
-                "../../../../../wp-config.php",
-                "<?php echo 'test'; ?>",
-                "'; DROP TABLE users; --",
-                "SELECT * FROM users WHERE '1'='1'",
-            ]
+            # Fallback to generic detection
+            return self._generic_waf_detection(validated_url)
 
-            # Test paths
-            for path in waf_test_paths:
-                try:
-                    full_url = validated_url.rstrip('/') + path
-                    response = self.http_client.get(full_url, timeout=10)
-                    if response.status_code in [403, 406]:
-                        return True
-                except Exception:
-                    continue
+    def detect_waf_detailed(self, url: str) -> dict:
+        """Detect WAF with detailed information"""
+        with ErrorContext(error_handler, "waf_detection_detailed"):
+            # Validate URL
+            is_valid, result = self.input_validator.validate_url(url)
+            if not is_valid:
+                raise ValueError(result)
 
-            # Test payloads
-            for payload in waf_test_payloads:
-                try:
-                    validated_payload = self.input_validator.validate_payload(payload)[1]
-                    response = self.http_client.get(validated_url, params={"q": validated_payload}, timeout=10)
-                    if response.status_code in [403, 406]:
-                        return True
-                except Exception:
-                    continue
+            validated_url = result
+            detection_details = self._analyze_waf_signatures(validated_url)
 
-            return False
+            # Test for generic WAF presence if no specific signatures found
+            if detection_details['detected_waf'] == 'Unknown':
+                generic_detected = self._generic_waf_detection(validated_url)
+                detection_details['generic_detection'] = generic_detected
+
+            return detection_details
+
+    def _analyze_waf_signatures(self, url: str) -> dict:
+        """Analyze response for WAF signatures"""
+        detection_result = {
+            'detected_waf': 'Unknown',
+            'confidence': 0.0,
+            'detection_method': 'signature_analysis',
+            'evidence': [],
+            'headers_found': [],
+            'response_patterns': [],
+            'server_info': None
+        }
+
+        try:
+            # Get baseline response
+            response = self.http_client.get(url, timeout=10)
+
+            # Check response headers
+            response_headers = {k.lower(): v for k, v in response.headers.items()}
+
+            # Check server header
+            server_header = response_headers.get('server', '').lower()
+            detection_result['server_info'] = response_headers.get('server')
+
+            # Analyze each WAF signature
+            for waf_name, signatures in self.waf_signatures.items():
+                confidence = 0.0
+                evidence = []
+
+                # Check headers
+                header_matches = []
+                for header in signatures.get('headers', []):
+                    if header.lower() in response_headers:
+                        header_matches.append(header)
+                        confidence += 0.3
+
+                if header_matches:
+                    evidence.append(f"Headers: {', '.join(header_matches)}")
+                    detection_result['headers_found'].extend(header_matches)
+
+                # Check server patterns
+                server_matches = []
+                for pattern in signatures.get('server_patterns', []):
+                    if pattern.lower() in server_header:
+                        server_matches.append(pattern)
+                        confidence += 0.4
+
+                if server_matches:
+                    evidence.append(f"Server: {', '.join(server_matches)}")
+
+                # Check response content patterns
+                content_matches = []
+                response_text = response.text.lower()
+                for pattern in signatures.get('response_patterns', []):
+                    if pattern.lower() in response_text:
+                        content_matches.append(pattern)
+                        confidence += 0.3
+
+                if content_matches:
+                    evidence.append(f"Content: {', '.join(content_matches)}")
+                    detection_result['response_patterns'].extend(content_matches)
+
+                # If confidence is high enough and we have evidence
+                base_confidence = signatures.get('confidence', 0.5)
+                if confidence >= 0.5 and evidence:
+                    final_confidence = min(base_confidence + confidence, 1.0)
+                    if final_confidence > detection_result['confidence']:
+                        detection_result.update({
+                            'detected_waf': waf_name,
+                            'confidence': final_confidence,
+                            'evidence': evidence
+                        })
+
+        except Exception as e:
+            detection_result['error'] = str(e)
+
+        return detection_result
+
+    def _generic_waf_detection(self, url: str) -> bool:
+        """Generic WAF detection using common triggers"""
+        # Test paths that commonly trigger WAF
+        waf_test_paths = [
+            "/.git/config",
+            "/.env",
+            "/wp-config.php",
+            "/admin",
+            "/phpinfo.php",
+            "/etc/passwd",
+            "/var/www/html",
+            "/index.php?page=../../../../etc/passwd",
+            "/index.php?page=../../../../.env",
+            "/index.php?page=../../../../wp-config.php",
+        ]
+
+        # Test payloads
+        waf_test_payloads = [
+            "<script>alert(1)</script>",
+            "' OR 1=1 --",
+            "UNION SELECT null,null,null",
+            "../../../../../../etc/passwd",
+            "../../../../../../.env",
+            "../../../../../wp-config.php",
+            "<?php echo 'test'; ?>",
+            "'; DROP TABLE users; --",
+            "SELECT * FROM users WHERE '1'='1'",
+        ]
+
+        # Test paths
+        for path in waf_test_paths:
+            try:
+                full_url = url.rstrip('/') + path
+                response = self.http_client.get(full_url, timeout=10)
+                if response.status_code in [403, 406]:
+                    return True
+            except Exception:
+                continue
+
+        # Test payloads
+        for payload in waf_test_payloads:
+            try:
+                validated_payload = self.input_validator.validate_payload(payload)[1]
+                response = self.http_client.get(url, params={"q": validated_payload}, timeout=10)
+                if response.status_code in [403, 406]:
+                    return True
+            except Exception:
+                continue
+
+        return False
 
 
 class HTTPClientService(IHTTPClient):

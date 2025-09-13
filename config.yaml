@@ -14,7 +14,7 @@ ml_config:
   feature_scaling: true
   model_checkpoint_interval: 100
   max_model_history: 10
-  batch_size: 32
+  batch_size: 1
   epochs: 100
 
 # Security Configuration

