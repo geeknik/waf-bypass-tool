@@ -128,7 +128,7 @@ network_config:
   default_timeout: 10.0
   max_retries: 3
   retry_delay: 1.0
-  user_agent: "WAF-Bypass-Tool/2.0"
+  user_agent: "WAF-Bypass-Tool/2.1"
   max_connections: 100
   connection_pool_size: 10
   keep_alive: true
