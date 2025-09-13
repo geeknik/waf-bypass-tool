@@ -1,0 +1,59 @@
+# WAF Bypass Tool Configuration
+# This file demonstrates the comprehensive configuration system
+
+app_name: "WAF Bypass Tool v2.0"
+version: "2.0.0"
+environment: "development"  # development, staging, production
+
+# Machine Learning Configuration
+ml_config:
+  learning_rate: 0.01
+  discount_factor: 0.99
+  gradient_clip_value: 10.0
+  td_error_clip_value: 1000.0
+  feature_scaling: true
+  model_checkpoint_interval: 100
+  max_model_history: 10
+  batch_size: 32
+  epochs: 100
+
+# Security Configuration
+security_config:
+  validation_level: "strict"  # lenient, strict, paranoid
+  max_payload_length: 10000
+  max_url_length: 2048
+  allowed_schemes: ["http", "https"]
+  blocked_domains: []
+  enable_circuit_breaker: true
+  circuit_breaker_threshold: 5
+  circuit_breaker_timeout: 300
+  rate_limit_requests: 100
+  rate_limit_window: 60
+
+# Network Configuration
+network_config:
+  default_timeout: 10.0
+  max_retries: 3
+  retry_delay: 1.0
+  user_agent: "WAF-Bypass-Tool/2.0"
+  max_connections: 100
+  connection_pool_size: 10
+  keep_alive: true
+
+# Logging Configuration
+logging_config:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+  file_path: "waf_evasion.log"
+  max_file_size: 10485760  # 10MB
+  backup_count: 5
+  enable_console: true
+  console_level: "WARNING"
+
+# Webhook Configuration
+webhook_config:
+  slack_webhook: null  # Set to your Slack webhook URL
+  discord_webhook: null  # Set to your Discord webhook URL
+  enable_webhooks: false
+  webhook_timeout: 5.0
+  retry_attempts: 2
