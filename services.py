@@ -7,6 +7,7 @@ from typing import List, Optional, Tuple, Any
 import requests
 import logging
 import numpy as np
+import random
 from interfaces import (
     IMLModel, IPayloadMutator, IInputValidator, IWAFDetector,
     IWAFBypassService, IConfigurationManager, IFeatureExtractor,
@@ -63,7 +64,7 @@ class PayloadMutatorService(IPayloadMutator):
         ]
 
     def mutate(self, payload: str, ml_model: IMLModel) -> str:
-        """Mutate payload using ML guidance"""
+        """Mutate payload using ML-guided selection"""
         with ErrorContext(error_handler, "payload_mutation"):
             # Validate input
             is_valid, result = self.input_validator.validate_payload(payload)
@@ -72,21 +73,74 @@ class PayloadMutatorService(IPayloadMutator):
 
             payload = result  # Use sanitized payload
 
-            # Use ML model to choose best mutation strategy
-            best_mutation = payload
+            # Generate candidate mutations using different strategies
+            candidates = []
+            strategies_tried = set()
 
-            # Try different strategies and pick the best one
-            for strategy in self._get_random_strategies(min(5, len(self.mutation_strategies))):
+            # Try up to 8 different strategies (allowing some retries for randomness)
+            for _ in range(min(8, len(self.mutation_strategies))):
+                available_strategies = [s for s in self.mutation_strategies if id(s) not in strategies_tried]
+                if not available_strategies:
+                    break
+                strategy = random.choice(available_strategies)
+
+                strategies_tried.add(id(strategy))  # Use id to avoid calling same strategy multiple times
+
                 try:
                     mutated = strategy(payload)
-                    if len(mutated) <= self.security_config.max_payload_length:
-                        best_mutation = mutated
-                        break  # For now, pick first valid mutation
+                    if (len(mutated) <= self.security_config.max_payload_length and
+                        len(mutated) > 0 and
+                        mutated != payload):  # Don't include identical payloads
+                        candidates.append(mutated)
                 except Exception as e:
-                    logging.warning(f"Mutation strategy failed: {e}")
+                    logging.debug(f"Mutation strategy failed: {e}")
                     continue
 
-            return best_mutation
+            # If no valid mutations, return original
+            if not candidates:
+                return payload
+
+            # ML-guided selection: score each candidate using the ML model
+            if hasattr(ml_model, 'actor_critic') and hasattr(ml_model.actor_critic, 'feature_extractor'):
+                try:
+                    # Get feature extractor from ML model
+                    feature_extractor = ml_model.actor_critic.feature_extractor
+
+                    best_mutation = payload
+                    best_score = float('-inf')
+
+                    for candidate in candidates:
+                        try:
+                            # Extract features for this candidate
+                            features = feature_extractor.extract_features(candidate).reshape(1, -1)
+
+                            # Use critic to score how good this mutation is expected to be
+                            # Critic predicts expected reward for a state
+                            if hasattr(ml_model.actor_critic, 'critic') and hasattr(ml_model.actor_critic.critic, 'predict'):
+                                score = ml_model.actor_critic.critic.predict(features)[0]
+                            else:
+                                # Fallback: use simple heuristic if critic not available
+                                score = len(set(candidate)) / len(candidate)  # Diversity heuristic
+
+                            if score > best_score:
+                                best_score = score
+                                best_mutation = candidate
+
+                        except Exception as e:
+                            logging.debug(f"ML scoring failed for candidate: {e}")
+                            # Use first valid candidate as fallback
+                            best_mutation = candidates[0]
+                            break
+
+                    logging.debug(f"ML-guided mutation: selected candidate with score {best_score:.3f}")
+                    return best_mutation
+
+                except Exception as e:
+                    logging.debug(f"ML-guided selection failed, using fallback: {e}")
+
+            # Fallback: use first valid mutation if ML scoring fails
+            logging.debug("Using fallback mutation selection")
+            return candidates[0] if candidates else payload
 
     def _get_random_strategies(self, count: int):
         """Get random mutation strategies"""

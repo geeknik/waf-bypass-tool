@@ -395,9 +395,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### v2.1.0 (Critical Bug Fixes & Core Improvements)
 - **🔧 ML System Fixed**: Reinforcement learning now properly learns from HTTP response codes instead of sabotaging itself with artificial keyword penalties
+- **🧠 ML-Guided Mutations**: Implemented intelligent payload selection using trained critic model to choose mutations most likely to bypass WAFs
+- **🎯 Smart Selection**: System generates multiple mutation candidates, scores them with ML, and selects highest-probability bypass methods
 - **🧹 Code Quality**: Removed all debug print statements and implemented proper logging throughout
 - **📏 Configuration**: Removed forced testing overrides that broke intended functionality
-- **🚀 Ready for Learning**: ML system now converges correctly and adapts to WAF patterns over time
+- **🚀 True Learning System**: ML system now actively guides payload generation based on learned bypass patterns
 
 ### v2.0.0 (Previous Release)
 - Initial ML-powered WAF bypass implementation
